@@ -11,7 +11,6 @@
 		2F360BC117692C4700D9A404 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2F360BC017692C4700D9A404 /* Images.xcassets */; };
 		2F45C1D5177676670052A7F9 /* Main_iPhone.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 2F360BB717692C4700D9A404 /* Main_iPhone.storyboard */; };
 		2F45C1D6177676670052A7F9 /* Main_iPad.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 2F360BBA17692C4700D9A404 /* Main_iPad.storyboard */; };
-		D74EBBC01A5AA25000A4CE8A /* readme.rtf in Resources */ = {isa = PBXBuildFile; fileRef = D74EBBBF1A5AA24F00A4CE8A /* readme.rtf */; };
 		D7D4241A1A5A53480096222F /* AVCamPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7D424191A5A53480096222F /* AVCamPreviewView.swift */; };
 		D7D4241C1A5A54C90096222F /* AVCamViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7D4241B1A5A54C90096222F /* AVCamViewController.swift */; };
 		D7D4241E1A5A89170096222F /* AVCamAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7D4241D1A5A89170096222F /* AVCamAppDelegate.swift */; };
@@ -25,7 +24,7 @@
 		2F360BBB17692C4700D9A404 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main_iPad.storyboard; sourceTree = "<group>"; };
 		2F360BC017692C4700D9A404 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		2F90F0AD178E8C450015CE45 /* ReadMe.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ReadMe.txt; sourceTree = "<group>"; };
-		D74EBBBF1A5AA24F00A4CE8A /* readme.rtf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.rtf; path = readme.rtf; sourceTree = "<group>"; };
+		D7B9157A1A766C87002949C6 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		D7D424191A5A53480096222F /* AVCamPreviewView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AVCamPreviewView.swift; sourceTree = "<group>"; };
 		D7D4241B1A5A54C90096222F /* AVCamViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AVCamViewController.swift; sourceTree = "<group>"; };
 		D7D4241D1A5A89170096222F /* AVCamAppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AVCamAppDelegate.swift; sourceTree = "<group>"; };
@@ -35,8 +34,8 @@
 		2F360B9917692C4700D9A404 = {
 			isa = PBXGroup;
 			children = (
+				D7B9157A1A766C87002949C6 /* README.md */,
 				2F90F0AD178E8C450015CE45 /* ReadMe.txt */,
-				D74EBBBF1A5AA24F00A4CE8A /* readme.rtf */,
 				2F360BAB17692C4700D9A404 /* AVCam */,
 				2F360BA317692C4700D9A404 /* Products */,
 			);
@@ -134,7 +133,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D74EBBC01A5AA25000A4CE8A /* readme.rtf in Resources */,
 				2F360BC117692C4700D9A404 /* Images.xcassets in Resources */,
 				2F360BB017692C4700D9A404 /* InfoPlist.strings in Resources */,
 				2F45C1D5177676670052A7F9 /* Main_iPhone.storyboard in Resources */,
