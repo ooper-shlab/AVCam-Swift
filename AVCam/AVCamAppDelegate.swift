@@ -58,6 +58,6 @@ import UIKit
 @objc(AVCamAppDelegate)
 class AVCamAppDelegate: UIResponder, UIApplicationDelegate {
 
-    var window: UIWindow!
+    var window: UIWindow?
 
 }

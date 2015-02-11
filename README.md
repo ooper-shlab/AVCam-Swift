@@ -1,6 +1,7 @@
 # AVCam
 
 Translated by OOPer in cooperation with shlab.jp, on 2015/1/5.
+Adapted to Swift 1.2 reuquirements on 2015/2/11.
 
 Based on
 <https://developer.apple.com/library/ios/samplecode/AVCam/Introduction/Intro.html#//apple_ref/doc/uid/DTS40010112>
@@ -13,6 +14,6 @@ You should not contact to Apple or SHLab(jp) about any faults caused by my trans
 ===========================================================================
 BUILD REQUIREMENTS:
 
-Xcode 6.1.1 or later, iOS SDK 8.1 or later
+Xcode 6.3 beta, iOS SDK 8.3
 
 ===========================================================================

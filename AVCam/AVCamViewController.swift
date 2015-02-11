@@ -57,18 +57,9 @@ import UIKit
 import AVFoundation
 import AssetsLibrary
 
-private var _CapturingStillImageContext = 0
-var CapturingStillImageContext: UnsafeMutablePointer<Void> {
-    return withUnsafeMutablePointer(&_CapturingStillImageContext, {UnsafeMutablePointer($0)})
-}
-var _RecordingContext = 0
-var RecordingContext: UnsafeMutablePointer<Void> {
-    return withUnsafeMutablePointer(&_RecordingContext, {UnsafeMutablePointer($0)})
-}
-var _SessionRunningAndDeviceAuthorizedContext = 0
-var SessionRunningAndDeviceAuthorizedContext: UnsafeMutablePointer<Void> {
-    return withUnsafeMutablePointer(&_SessionRunningAndDeviceAuthorizedContext, {UnsafeMutablePointer($0)})
-}
+let CapturingStillImageContext = UnsafeMutablePointer<Void>.alloc(1)
+let RecordingContext = UnsafeMutablePointer<Void>.alloc(1)
+let SessionRunningAndDeviceAuthorizedContext = UnsafeMutablePointer<Void>.alloc(1)
 
 @objc(AVCamViewController)
 class AVCamViewController: UIViewController, AVCaptureFileOutputRecordingDelegate {
@@ -131,7 +122,7 @@ class AVCamViewController: UIViewController, AVCaptureFileOutputRecordingDelegat
             
             
             let videoDevice = AVCamViewController.deviceWithMediaType(AVMediaTypeVideo, preferringPosition: .Back)
-            let videoDeviceInput = AVCaptureDeviceInput.deviceInputWithDevice(videoDevice, error: &error) as AVCaptureDeviceInput!
+            let videoDeviceInput = AVCaptureDeviceInput.deviceInputWithDevice(videoDevice, error: &error) as! AVCaptureDeviceInput!
             
             if error != nil {
                 NSLog("%@", error!)
@@ -153,13 +144,13 @@ class AVCamViewController: UIViewController, AVCaptureFileOutputRecordingDelegat
                     } else {
                         orientation = self.interfaceOrientation
                     }
-                    (self.previewView.layer as AVCaptureVideoPreviewLayer).connection.videoOrientation = AVCaptureVideoOrientation(rawValue: orientation.rawValue)!
+                    (self.previewView.layer as! AVCaptureVideoPreviewLayer).connection.videoOrientation = AVCaptureVideoOrientation(rawValue: orientation.rawValue)!
                 }
             }
             
-            let audioDevice = AVCaptureDevice.devicesWithMediaType(AVMediaTypeAudio).first as AVCaptureDevice
+            let audioDevice = AVCaptureDevice.devicesWithMediaType(AVMediaTypeAudio).first as! AVCaptureDevice
             
-            let audioDeviceInput = AVCaptureDeviceInput.deviceInputWithDevice(audioDevice, error: &error) as AVCaptureDeviceInput!
+            let audioDeviceInput = AVCaptureDeviceInput.deviceInputWithDevice(audioDevice, error: &error) as! AVCaptureDeviceInput!
             
             if error != nil {
                 NSLog("%@", error!)
@@ -202,10 +193,11 @@ class AVCamViewController: UIViewController, AVCaptureFileOutputRecordingDelegat
             NSNotificationCenter.defaultCenter().addObserver(self, selector: "subjectAreaDidChange:", name: AVCaptureDeviceSubjectAreaDidChangeNotification, object: self.videoDeviceInput.device)
             
             self.runtimeErrorHandlingObserver = NSNotificationCenter.defaultCenter().addObserverForName(AVCaptureSessionRuntimeErrorNotification, object: self.session, queue: nil) {[weak self]note in
-                dispatch_async(self?.sessionQueue) {[self]
+                if self == nil { return }
+                dispatch_async(self!.sessionQueue!) {[self]
                     // Manually restarting the session since it must have been stopped due to an error.
-                    self?.session.startRunning()
-                    self?.recordButton.setTitle(NSLocalizedString("Record", comment: "Recording button record title"), forState: .Normal)
+                    self!.session.startRunning()
+                    self!.recordButton.setTitle(NSLocalizedString("Record", comment: "Recording button record title"), forState: .Normal)
                 }
             }
             self.session.startRunning()
@@ -239,7 +231,7 @@ class AVCamViewController: UIViewController, AVCaptureFileOutputRecordingDelegat
     }
     
     override func willRotateToInterfaceOrientation(toInterfaceOrientation: UIInterfaceOrientation, duration: NSTimeInterval) {
-        (self.previewView.layer as AVCaptureVideoPreviewLayer).connection.videoOrientation = AVCaptureVideoOrientation(rawValue: toInterfaceOrientation.rawValue)!
+        (self.previewView.layer as! AVCaptureVideoPreviewLayer).connection.videoOrientation = AVCaptureVideoOrientation(rawValue: toInterfaceOrientation.rawValue)!
     }
     
     override func observeValueForKeyPath(keyPath: String, ofObject object: AnyObject, change: [NSObject : AnyObject], context: UnsafeMutablePointer<Void>) {
@@ -297,7 +289,7 @@ class AVCamViewController: UIViewController, AVCaptureFileOutputRecordingDelegat
                 }
                 
                 // Update the orientation on the movie file output video connection before starting recording.
-                self.movieFileOutput.connectionWithMediaType(AVMediaTypeVideo).videoOrientation = (self.previewView.layer as AVCaptureVideoPreviewLayer).connection.videoOrientation
+                self.movieFileOutput.connectionWithMediaType(AVMediaTypeVideo).videoOrientation = (self.previewView.layer as! AVCaptureVideoPreviewLayer).connection.videoOrientation
                 
                 // Turning OFF flash for video recording
                 AVCamViewController.setFlashMode(.Off, forDevice: self.videoDeviceInput.device)
@@ -331,7 +323,7 @@ class AVCamViewController: UIViewController, AVCaptureFileOutputRecordingDelegat
             }
             
             let videoDevice = AVCamViewController.deviceWithMediaType(AVMediaTypeVideo, preferringPosition: preferredPosition)
-            let videoDeviceInput = AVCaptureDeviceInput.deviceInputWithDevice(videoDevice, error: nil) as AVCaptureDeviceInput
+            let videoDeviceInput = AVCaptureDeviceInput.deviceInputWithDevice(videoDevice, error: nil) as! AVCaptureDeviceInput
             
             self.session.beginConfiguration()
             
@@ -362,7 +354,7 @@ class AVCamViewController: UIViewController, AVCaptureFileOutputRecordingDelegat
     @IBAction func snapStillImage(AnyObject) {
         dispatch_async(self.sessionQueue) {
             // Update the orientation on the still image output video connection before capturing.
-            self.stillImageOutput.connectionWithMediaType(AVMediaTypeVideo).videoOrientation = (self.previewView.layer as AVCaptureVideoPreviewLayer).connection.videoOrientation
+            self.stillImageOutput.connectionWithMediaType(AVMediaTypeVideo).videoOrientation = (self.previewView.layer as! AVCaptureVideoPreviewLayer).connection.videoOrientation
             
             // Flash set to Auto for Still Capture
             AVCamViewController.setFlashMode(.Auto, forDevice: self.videoDeviceInput.device)
@@ -380,7 +372,7 @@ class AVCamViewController: UIViewController, AVCaptureFileOutputRecordingDelegat
     }
     
     @IBAction private func focusAndExposeTap(gestureRecognizer: UIGestureRecognizer) {
-        let devicePoint = (self.previewView.layer as AVCaptureVideoPreviewLayer).captureDevicePointOfInterestForPoint(gestureRecognizer.locationInView(gestureRecognizer.view))
+        let devicePoint = (self.previewView.layer as! AVCaptureVideoPreviewLayer).captureDevicePointOfInterestForPoint(gestureRecognizer.locationInView(gestureRecognizer.view))
         self.focusWithMode(.AutoFocus, exposeWithMode: .AutoExpose, atDevicePoint: devicePoint, monitorSubjectAreaChange: true)
     }
     
@@ -452,9 +444,9 @@ class AVCamViewController: UIViewController, AVCaptureFileOutputRecordingDelegat
     
     private class func deviceWithMediaType(mediaType: String, preferringPosition position: AVCaptureDevicePosition) -> AVCaptureDevice {
         let devices = AVCaptureDevice.devicesWithMediaType(mediaType)
-        var captureDevice = devices.first as AVCaptureDevice
+        var captureDevice = devices.first as! AVCaptureDevice
         
-        for device in devices as [AVCaptureDevice] {
+        for device in devices as! [AVCaptureDevice] {
             if device.position == position {
                 captureDevice = device
                 break
