@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "0610"
+   LastUpgradeVersion = "0700"
    version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "2F360BA117692C4700D9A404"
+               BlueprintIdentifier = "220626581A1E330400A45150"
                BuildableName = "AVCam.app"
                BlueprintName = "AVCam"
                ReferencedContainer = "container:AVCam.xcodeproj">
@@ -32,12 +32,14 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "2F360BA117692C4700D9A404"
+            BlueprintIdentifier = "220626581A1E330400A45150"
             BuildableName = "AVCam.app"
             BlueprintName = "AVCam"
             ReferencedContainer = "container:AVCam.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
+      <AdditionalOptions>
+      </AdditionalOptions>
    </TestAction>
    <LaunchAction
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
@@ -47,11 +49,13 @@
       buildConfiguration = "Debug"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
+      debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
-      <BuildableProductRunnable>
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "2F360BA117692C4700D9A404"
+            BlueprintIdentifier = "220626581A1E330400A45150"
             BuildableName = "AVCam.app"
             BlueprintName = "AVCam"
             ReferencedContainer = "container:AVCam.xcodeproj">
@@ -66,10 +70,11 @@
       useCustomWorkingDirectory = "NO"
       buildConfiguration = "Release"
       debugDocumentVersioning = "YES">
-      <BuildableProductRunnable>
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "2F360BA117692C4700D9A404"
+            BlueprintIdentifier = "220626581A1E330400A45150"
             BuildableName = "AVCam.app"
             BlueprintName = "AVCam"
             ReferencedContainer = "container:AVCam.xcodeproj">

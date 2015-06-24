@@ -1,18 +1,26 @@
-# AVCam
+# AVCam-iOS: Using AVFoundation to Capture Images and Movies
 
-Translated by OOPer in cooperation with shlab.jp, on 2015/1/5.
+AVCam demonstrates how to use the  AVFoundation capture API to record movies and capture still images. The sample has a record button for recording movies, a camera button for switching between front and back cameras (on supported devices), and a still button for capturing still images. AVCam runs only on an actual device, either an iPad or iPhone, and cannot be run in Simulator.
 
-Based on
-<https://developer.apple.com/library/ios/samplecode/AVCam/Introduction/Intro.html#//apple_ref/doc/uid/DTS40010112>
-2014-02-03.
+## Requirements
 
-As this is a line-by-line translation from the original sample code, "redistribute the Apple Software in its entirety and without modifications" would apply. See license terms in each file .
-Some faults caused by my translation may exist. Not all features tested.
-You should not contact to Apple or SHLab(jp) about any faults caused by my translation.
+### Build
 
-===========================================================================
-BUILD REQUIREMENTS:
+Xcode 7.0, iOS 9.0 SDK
 
-Xcode 6.3, iOS SDK 8.3
+### Runtime
 
-===========================================================================
+iOS 8.0 or later
+
+## Changes from Previous Version
+
+- Use the Photos framework to save captured images and videos.
+- Adopt the interface rotation APIs introduced in iOS 8.
+- Adopt size classes and use one storyboard for all devices.
+- Opt-out of multi-app layout support by requiring full screen.
+- Handle session interruptions, see AVCaptureSessionInterruptionReason.
+- More explicit authorization flow.
+- Update usage of deprecated APIs.
+- Bug fixes.
+
+Copyright (C) 2015 Apple Inc. All rights reserved.
