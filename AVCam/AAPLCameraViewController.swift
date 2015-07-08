@@ -284,7 +284,7 @@ class AAPLCameraViewController: UIViewController, AVCaptureFileOutputRecordingDe
         self.movieFileOutput.removeObserver(self, forKeyPath: "recording", context: RecordingContext)
     }
     
-    override func observeValueForKeyPath(keyPath: String?, ofObject object: AnyObject?, change: [NSObject : AnyObject]?, context: UnsafeMutablePointer<Void>) {
+    override func observeValueForKeyPath(keyPath: String?, ofObject object: AnyObject?, change: [String : AnyObject]?, context: UnsafeMutablePointer<Void>) {
         switch context {
         case CapturingStillImageContext:
             
@@ -414,7 +414,7 @@ class AAPLCameraViewController: UIViewController, AVCaptureFileOutputRecordingDe
     
     //MARK: Actions
     
-    @IBAction func resumeInterruptedSession(AnyObject) {
+    @IBAction func resumeInterruptedSession(_: AnyObject) {
         dispatch_async(self.sessionQueue) {
             // The session might fail to start running, e.g., if a phone or FaceTime call is still using audio or video.
             // A failure to start the session running will be communicated via a session runtime error notification.
@@ -438,7 +438,7 @@ class AAPLCameraViewController: UIViewController, AVCaptureFileOutputRecordingDe
         }
     }
     
-    @IBAction func toggleMovieRecording(AnyObject) {
+    @IBAction func toggleMovieRecording(_: AnyObject) {
         self.recordButton.enabled = false
         
         dispatch_async(self.sessionQueue) {
@@ -470,7 +470,7 @@ class AAPLCameraViewController: UIViewController, AVCaptureFileOutputRecordingDe
         }
     }
     
-    @IBAction func changeCamera(AnyObject) {
+    @IBAction func changeCamera(_: AnyObject) {
         self.cameraButton.enabled = false
         self.recordButton.enabled = false
         self.stillButton.enabled = false
@@ -527,7 +527,7 @@ class AAPLCameraViewController: UIViewController, AVCaptureFileOutputRecordingDe
         }
     }
     
-    @IBAction func snapStillImage(AnyObject) {
+    @IBAction func snapStillImage(_: AnyObject) {
         dispatch_async(self.sessionQueue) {
             let connection = self.stillImageOutput.connectionWithMediaType(AVMediaTypeVideo)
             let previewLayer = self.previewView.layer as! AVCaptureVideoPreviewLayer
