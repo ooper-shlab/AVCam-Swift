@@ -13,7 +13,6 @@ View controller for camera interface.
 #import "AAPLPreviewView.h"
 
 static void * CapturingStillImageContext = &CapturingStillImageContext;
-static void * RecordingContext = &RecordingContext;
 static void * SessionRunningContext = &SessionRunningContext;
 
 typedef NS_ENUM( NSInteger, AVCamSetupResult ) {
@@ -282,7 +281,6 @@ typedef NS_ENUM( NSInteger, AVCamSetupResult ) {
 {
 	[self.session addObserver:self forKeyPath:@"running" options:NSKeyValueObservingOptionNew context:SessionRunningContext];
 	[self.stillImageOutput addObserver:self forKeyPath:@"capturingStillImage" options:NSKeyValueObservingOptionNew context:CapturingStillImageContext];
-	[self.movieFileOutput addObserver:self forKeyPath:@"recording" options:NSKeyValueObservingOptionNew context:RecordingContext];
 
 	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(subjectAreaDidChange:) name:AVCaptureDeviceSubjectAreaDidChangeNotification object:self.videoDeviceInput.device];
 	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(sessionRuntimeError:) name:AVCaptureSessionRuntimeErrorNotification object:self.session];
@@ -300,7 +298,6 @@ typedef NS_ENUM( NSInteger, AVCamSetupResult ) {
 
 	[self.session removeObserver:self forKeyPath:@"running" context:SessionRunningContext];
 	[self.stillImageOutput removeObserver:self forKeyPath:@"capturingStillImage" context:CapturingStillImageContext];
-	[self.movieFileOutput removeObserver:self forKeyPath:@"recording" context:RecordingContext];
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
@@ -316,23 +313,6 @@ typedef NS_ENUM( NSInteger, AVCamSetupResult ) {
 				}];
 			} );
 		}
-	}
-	else if ( context == RecordingContext ) {
-		BOOL isRecording = [change[NSKeyValueChangeNewKey] boolValue];
-
-		dispatch_async( dispatch_get_main_queue(), ^{
-			if ( isRecording ) {
-				self.cameraButton.enabled = NO;
-				self.recordButton.enabled = YES;
-				[self.recordButton setTitle:NSLocalizedString( @"Stop", @"Recording button stop title" ) forState:UIControlStateNormal];
-			}
-			else {
-				// Only enable the ability to change camera if the device has more than one camera.
-				self.cameraButton.enabled = ( [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo].count > 1 );
-				self.recordButton.enabled = YES;
-				[self.recordButton setTitle:NSLocalizedString( @"Record", @"Recording button record title" ) forState:UIControlStateNormal];
-			}
-		} );
 	}
 	else if ( context == SessionRunningContext ) {
 		BOOL isSessionRunning = [change[NSKeyValueChangeNewKey] boolValue];
@@ -472,6 +452,9 @@ typedef NS_ENUM( NSInteger, AVCamSetupResult ) {
 
 - (IBAction)toggleMovieRecording:(id)sender
 {
+	// Disable the Camera button until recording finishes, and disable the Record button until recording starts or finishes. See the
+	// AVCaptureFileOutputRecordingDelegate methods.
+	self.cameraButton.enabled = NO;
 	self.recordButton.enabled = NO;
 
 	dispatch_async( self.sessionQueue, ^{
@@ -581,13 +564,42 @@ typedef NS_ENUM( NSInteger, AVCamSetupResult ) {
 				NSData *imageData = [AVCaptureStillImageOutput jpegStillImageNSDataRepresentation:imageDataSampleBuffer];
 				[PHPhotoLibrary requestAuthorization:^( PHAuthorizationStatus status ) {
 					if ( status == PHAuthorizationStatusAuthorized ) {
-						[[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
-							[[PHAssetCreationRequest creationRequestForAsset] addResourceWithType:PHAssetResourceTypePhoto data:imageData options:nil];
-						} completionHandler:^( BOOL success, NSError *error ) {
-							if ( ! success ) {
-								NSLog( @"Error occurred while saving image to photo library: %@", error );
-							}
-						}];
+						// To preserve the metadata, we create an asset from the JPEG NSData representation.
+						// Note that creating an asset from a UIImage discards the metadata.
+						// In iOS 9, we can use -[PHAssetCreationRequest addResourceWithType:data:options].
+						// In iOS 8, we save the image to a temporary file and use +[PHAssetChangeRequest creationRequestForAssetFromImageAtFileURL:].
+						if ( [PHAssetCreationRequest class] ) {
+							[[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
+								[[PHAssetCreationRequest creationRequestForAsset] addResourceWithType:PHAssetResourceTypePhoto data:imageData options:nil];
+							} completionHandler:^( BOOL success, NSError *error ) {
+								if ( ! success ) {
+									NSLog( @"Error occurred while saving image to photo library: %@", error );
+								}
+							}];
+						}
+						else {
+							NSString *temporaryFileName = [NSProcessInfo processInfo].globallyUniqueString;
+							NSString *temporaryFilePath = [NSTemporaryDirectory() stringByAppendingPathComponent:[temporaryFileName stringByAppendingPathExtension:@"jpg"]];
+							NSURL *temporaryFileURL = [NSURL fileURLWithPath:temporaryFilePath];
+
+							[[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
+								NSError *error = nil;
+								[imageData writeToURL:temporaryFileURL options:NSDataWritingAtomic error:&error];
+								if ( error ) {
+									NSLog( @"Error occured while writing image data to a temporary file: %@", error );
+								}
+								else {
+									[PHAssetChangeRequest creationRequestForAssetFromImageAtFileURL:temporaryFileURL];
+								}
+							} completionHandler:^( BOOL success, NSError *error ) {
+								if ( ! success ) {
+									NSLog( @"Error occurred while saving image to photo library: %@", error );
+								}
+
+								// Delete the temporary file.
+								[[NSFileManager defaultManager] removeItemAtURL:temporaryFileURL error:nil];
+							}];
+						}
 					}
 				}];
 			}
@@ -604,7 +616,16 @@ typedef NS_ENUM( NSInteger, AVCamSetupResult ) {
 	[self focusWithMode:AVCaptureFocusModeAutoFocus exposeWithMode:AVCaptureExposureModeAutoExpose atDevicePoint:devicePoint monitorSubjectAreaChange:YES];
 }
 
-#pragma mark File Output Delegate
+#pragma mark File Output Recording Delegate
+
+- (void)captureOutput:(AVCaptureFileOutput *)captureOutput didStartRecordingToOutputFileAtURL:(NSURL *)fileURL fromConnections:(NSArray *)connections
+{
+	// Enable the Record button to let the user stop the recording.
+	dispatch_async( dispatch_get_main_queue(), ^{
+		self.recordButton.enabled = YES;
+		[self.recordButton setTitle:NSLocalizedString( @"Stop", @"Recording button stop title") forState:UIControlStateNormal];
+	});
+}
 
 - (void)captureOutput:(AVCaptureFileOutput *)captureOutput didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL fromConnections:(NSArray *)connections error:(NSError *)error
 {
@@ -660,6 +681,14 @@ typedef NS_ENUM( NSInteger, AVCamSetupResult ) {
 	else {
 		cleanup();
 	}
+
+	// Enable the Camera and Record buttons to let the user switch camera and start another recording.
+	dispatch_async( dispatch_get_main_queue(), ^{
+		// Only enable the ability to change camera if the device has more than one camera.
+		self.cameraButton.enabled = ( [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo].count > 1 );
+		self.recordButton.enabled = YES;
+		[self.recordButton setTitle:NSLocalizedString( @"Record", @"Recording button record title" ) forState:UIControlStateNormal];
+	});
 }
 
 #pragma mark Device Configuration

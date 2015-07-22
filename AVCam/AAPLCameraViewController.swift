@@ -19,7 +19,6 @@ import AVFoundation
 import Photos
 
 private var CapturingStillImageContext = UnsafeMutablePointer<Void>.alloc(1)
-private var RecordingContext = UnsafeMutablePointer<Void>.alloc(1)
 private var SessionRunningContext = UnsafeMutablePointer<Void>.alloc(1)
 
 private enum AVCamSetupResult: Int {
@@ -264,7 +263,6 @@ class AAPLCameraViewController: UIViewController, AVCaptureFileOutputRecordingDe
     private func addObservers() {
         self.session.addObserver(self, forKeyPath: "running", options: NSKeyValueObservingOptions.New, context: SessionRunningContext)
         self.stillImageOutput.addObserver(self, forKeyPath: "capturingStillImage", options:NSKeyValueObservingOptions.New, context: CapturingStillImageContext)
-        self.movieFileOutput.addObserver(self, forKeyPath: "recording", options: NSKeyValueObservingOptions.New, context: RecordingContext)
         
         NSNotificationCenter.defaultCenter().addObserver(self, selector: "subjectAreaDidChange:", name: AVCaptureDeviceSubjectAreaDidChangeNotification, object: self.videoDeviceInput.device)
         NSNotificationCenter.defaultCenter().addObserver(self, selector: "sessionRuntimeError:", name: AVCaptureSessionRuntimeErrorNotification, object: self.session)
@@ -281,7 +279,6 @@ class AAPLCameraViewController: UIViewController, AVCaptureFileOutputRecordingDe
         
         self.session.removeObserver(self, forKeyPath: "running", context: SessionRunningContext)
         self.stillImageOutput.removeObserver(self, forKeyPath: "capturingStillImage", context: CapturingStillImageContext)
-        self.movieFileOutput.removeObserver(self, forKeyPath: "recording", context: RecordingContext)
     }
     
     override func observeValueForKeyPath(keyPath: String?, ofObject object: AnyObject?, change: [String : AnyObject]?, context: UnsafeMutablePointer<Void>) {
@@ -296,21 +293,6 @@ class AAPLCameraViewController: UIViewController, AVCaptureFileOutputRecordingDe
                     UIView.animateWithDuration(0.25) {
                         self.previewView.layer.opacity = 1.0
                     }
-                }
-            }
-        case RecordingContext:
-            let isRecording = change![NSKeyValueChangeNewKey]! as! Bool
-            
-            dispatch_async(dispatch_get_main_queue()) {
-                if isRecording {
-                    self.cameraButton.enabled = false
-                    self.recordButton.enabled = true
-                    self.recordButton.setTitle(NSLocalizedString("Stop", comment: "Recording button stop title"), forState: UIControlState.Normal)
-                } else {
-                    // Only enable the ability to change camera if the device has more than one camera.
-                    self.cameraButton.enabled = (AVCaptureDevice.devicesWithMediaType(AVMediaTypeVideo).count > 1)
-                    self.recordButton.enabled = true
-                    self.recordButton.setTitle(NSLocalizedString("Record", comment: "Recording button record title"), forState: UIControlState.Normal)
                 }
             }
         case SessionRunningContext:
@@ -439,6 +421,9 @@ class AAPLCameraViewController: UIViewController, AVCaptureFileOutputRecordingDe
     }
     
     @IBAction func toggleMovieRecording(_: AnyObject) {
+        // Disable the Camera button until recording finishes, and disable the Record button until recording starts or finishes. See the
+        // AVCaptureFileOutputRecordingDelegate methods.
+        self.cameraButton.enabled = false
         self.recordButton.enabled = false
         
         dispatch_async(self.sessionQueue) {
@@ -545,18 +530,43 @@ class AAPLCameraViewController: UIViewController, AVCaptureFileOutputRecordingDe
                     let imageData = AVCaptureStillImageOutput.jpegStillImageNSDataRepresentation(imageDataSampleBuffer)
                     PHPhotoLibrary.requestAuthorization {status in
                         if status == PHAuthorizationStatus.Authorized {
-                            PHPhotoLibrary.sharedPhotoLibrary().performChanges({
-                                if #available(iOS 9.0, *) {
-                                    PHAssetCreationRequest.creationRequestForAsset().addResourceWithType(PHAssetResourceType.Photo, data: imageData, options:nil)
-                                } else {
-                                    let image = UIImage(data: imageData)!
-                                    PHAssetChangeRequest.creationRequestForAssetFromImage(image)
-                                }
-                            }, completionHandler: {success, error in
-                                if !success {
-                                    NSLog("Error occurred while saving image to photo library: %@", error!)
-                                }
-                            })
+                            // To preserve the metadata, we create an asset from the JPEG NSData representation.
+                            // Note that creating an asset from a UIImage discards the metadata.
+                            // In iOS 9, we can use -[PHAssetCreationRequest addResourceWithType:data:options].
+                            // In iOS 8, we save the image to a temporary file and use +[PHAssetChangeRequest creationRequestForAssetFromImageAtFileURL:].
+                            if #available(iOS 9.0, *) {
+                                PHPhotoLibrary.sharedPhotoLibrary().performChanges({
+                                    PHAssetCreationRequest.creationRequestForAsset().addResourceWithType(.Photo, data: imageData, options: nil)
+                                    }, completionHandler: {success, error in
+                                        if !success {
+                                            NSLog("Error occurred while saving image to photo library: %@", error!)
+                                        }
+                                })
+                            } else {
+                                let temporaryFileName = NSProcessInfo().globallyUniqueString
+                                let temporaryFilePath = NSTemporaryDirectory().stringByAppendingPathComponent(temporaryFileName.stringByAppendingPathExtension("jpg")!)
+                                let temporaryFileURL = NSURL(fileURLWithPath: temporaryFilePath)
+                                
+                                PHPhotoLibrary.sharedPhotoLibrary().performChanges({
+                                    do {
+                                        try imageData.writeToURL(temporaryFileURL, options: .AtomicWrite)
+                                        PHAssetChangeRequest.creationRequestForAssetFromImageAtFileURL(temporaryFileURL)
+                                    } catch let error as NSError {
+                                        NSLog("Error occured while writing image data to a temporary file: %@", error)
+                                    } catch _ {
+                                        fatalError()
+                                    }
+                                    }, completionHandler: {success, error in
+                                        if !success {
+                                            NSLog("Error occurred while saving image to photo library: %@", error!)
+                                        }
+                                        
+                                        // Delete the temporary file.
+                                        do {
+                                            try NSFileManager.defaultManager().removeItemAtURL(temporaryFileURL)
+                                        } catch _ {}
+                                })
+                            }
                         }
                     }
                 } else {
@@ -571,7 +581,15 @@ class AAPLCameraViewController: UIViewController, AVCaptureFileOutputRecordingDe
         self.focusWithMode(AVCaptureFocusMode.AutoFocus, exposeWithMode: AVCaptureExposureMode.AutoExpose, atDevicePoint: devicePoint, monitorSubjectAreaChange: true)
     }
     
-    //MARK: File Output Delegate
+    //MARK: File Output Recording Delegate
+    
+    func captureOutput(captureOutput: AVCaptureFileOutput!, didStartRecordingToOutputFileAtURL fileURL: NSURL!, fromConnections connections: [AnyObject]!) {
+        // Enable the Record button to let the user stop the recording.
+        dispatch_async( dispatch_get_main_queue()) {
+            self.recordButton.enabled = true
+            self.recordButton.setTitle(NSLocalizedString("Stop", comment: "Recording button stop title"), forState: .Normal)
+        }
+    }
     
     func captureOutput(captureOutput: AVCaptureFileOutput!, didFinishRecordingToOutputFileAtURL outputFileURL: NSURL!, fromConnections connections: [AnyObject]!, error: NSError!) {
         // Note that currentBackgroundRecordingID is used to end the background task associated with this recording.
@@ -596,34 +614,42 @@ class AAPLCameraViewController: UIViewController, AVCaptureFileOutputRecordingDe
             NSLog("Movie file finishing error: %@", error!)
             success = error!.userInfo[AVErrorRecordingSuccessfullyFinishedKey] as! Bool? ?? false
         }
-        guard success else {
-            cleanup()
-            return
-        }
-        // Check authorization status.
-        PHPhotoLibrary.requestAuthorization {status in
-            guard status == PHAuthorizationStatus.Authorized else {
-                cleanup()
-                return
+        if success {
+            // Check authorization status.
+            PHPhotoLibrary.requestAuthorization {status in
+                guard status == PHAuthorizationStatus.Authorized else {
+                    cleanup()
+                    return
+                }
+                // Save the movie file to the photo library and cleanup.
+                PHPhotoLibrary.sharedPhotoLibrary().performChanges({
+                    // In iOS 9 and later, it's possible to move the file into the photo library without duplicating the file data.
+                    // This avoids using double the disk space during save, which can make a difference on devices with limited free disk space.
+                    if #available(iOS 9.0, *) {
+                        let options = PHAssetResourceCreationOptions()
+                        options.shouldMoveFile = true
+                        let changeRequest = PHAssetCreationRequest.creationRequestForAsset()
+                        changeRequest.addResourceWithType(PHAssetResourceType.Video, fileURL: outputFileURL, options: options)
+                    } else {
+                        PHAssetChangeRequest.creationRequestForAssetFromVideoAtFileURL(outputFileURL)
+                    }
+                    }, completionHandler: {success, error in
+                        if !success {
+                            NSLog("Could not save movie to photo library: %@", error!)
+                        }
+                        cleanup()
+                })
             }
-            // Save the movie file to the photo library and cleanup.
-            PHPhotoLibrary.sharedPhotoLibrary().performChanges({
-                // In iOS 9 and later, it's possible to move the file into the photo library without duplicating the file data.
-                // This avoids using double the disk space during save, which can make a difference on devices with limited free disk space.
-                if #available(iOS 9.0, *) {
-                    let options = PHAssetResourceCreationOptions()
-                    options.shouldMoveFile = true
-                    let changeRequest = PHAssetCreationRequest.creationRequestForAsset()
-                    changeRequest.addResourceWithType(PHAssetResourceType.Video, fileURL: outputFileURL, options: options)
-                } else {
-                    PHAssetChangeRequest.creationRequestForAssetFromVideoAtFileURL(outputFileURL)
-                }
-            }, completionHandler: {success, error in
-                if !success {
-                    NSLog("Could not save movie to photo library: %@", error!)
-                }
-                cleanup()
-            })
+        } else {
+            cleanup()
+        }
+        
+        // Enable the Camera and Record buttons to let the user switch camera and start another recording.
+        dispatch_async( dispatch_get_main_queue()) {
+            // Only enable the ability to change camera if the device has more than one camera.
+            self.cameraButton.enabled = (AVCaptureDevice.devicesWithMediaType(AVMediaTypeVideo).count > 1)
+            self.recordButton.enabled = true
+            self.recordButton.setTitle(NSLocalizedString("Record", comment: "Recording button record title"), forState: .Normal)
         }
     }
     
