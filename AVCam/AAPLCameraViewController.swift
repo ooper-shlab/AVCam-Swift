@@ -139,6 +139,7 @@ class AAPLCameraViewController: UIViewController, AVCaptureFileOutputRecordingDe
                     
                     let previewLayer = self.previewView.layer as! AVCaptureVideoPreviewLayer
                     previewLayer.connection.videoOrientation = initialVideoOrientation
+                    //previewLayer.connection.automaticallyAdjustsVideoMirroring = false //###
                 }
             } else {
                 NSLog("Could not add video device input to the session")
@@ -264,14 +265,14 @@ class AAPLCameraViewController: UIViewController, AVCaptureFileOutputRecordingDe
         self.session.addObserver(self, forKeyPath: "running", options: NSKeyValueObservingOptions.New, context: SessionRunningContext)
         self.stillImageOutput.addObserver(self, forKeyPath: "capturingStillImage", options:NSKeyValueObservingOptions.New, context: CapturingStillImageContext)
         
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: "subjectAreaDidChange:", name: AVCaptureDeviceSubjectAreaDidChangeNotification, object: self.videoDeviceInput.device)
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: "sessionRuntimeError:", name: AVCaptureSessionRuntimeErrorNotification, object: self.session)
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(AAPLCameraViewController.subjectAreaDidChange(_:)), name: AVCaptureDeviceSubjectAreaDidChangeNotification, object: self.videoDeviceInput.device)
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(AAPLCameraViewController.sessionRuntimeError(_:)), name: AVCaptureSessionRuntimeErrorNotification, object: self.session)
         // A session can only run when the app is full screen. It will be interrupted in a multi-app layout, introduced in iOS 9,
         // see also the documentation of AVCaptureSessionInterruptionReason. Add observers to handle these session interruptions
         // and show a preview is paused message. See the documentation of AVCaptureSessionWasInterruptedNotification for other
         // interruption reasons.
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: "sessionWasInterrupted:", name: AVCaptureSessionWasInterruptedNotification, object: self.session)
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: "sessionInterruptionEnded:", name: AVCaptureSessionInterruptionEndedNotification, object: self.session)
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(AAPLCameraViewController.sessionWasInterrupted(_:)), name: AVCaptureSessionWasInterruptedNotification, object: self.session)
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(AAPLCameraViewController.sessionInterruptionEnded(_:)), name: AVCaptureSessionInterruptionEndedNotification, object: self.session)
     }
     
     private func removeObservers() {
@@ -489,7 +490,7 @@ class AAPLCameraViewController: UIViewController, AVCaptureFileOutputRecordingDe
                 NSNotificationCenter.defaultCenter().removeObserver(self, name: AVCaptureDeviceSubjectAreaDidChangeNotification, object: currentVideoDevice)
                 
                 AAPLCameraViewController.setFlashMode(AVCaptureFlashMode.Auto, forDevice: videoDevice!)
-                NSNotificationCenter.defaultCenter().addObserver(self, selector: "subjectAreaDidChange:",  name: AVCaptureDeviceSubjectAreaDidChangeNotification, object: videoDevice)
+                NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(AAPLCameraViewController.subjectAreaDidChange(_:)),  name: AVCaptureDeviceSubjectAreaDidChangeNotification, object: videoDevice)
                 
                 self.session.addInput(videoDeviceInput)
                 self.videoDeviceInput = videoDeviceInput
